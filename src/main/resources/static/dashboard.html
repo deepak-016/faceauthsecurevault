@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard – FaceAuth</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>" />
+  <style>
+    /* Page-specific overrides */
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+
+    /* Mobile hamburger */
+    .hamburger {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-primary);
+      margin-right: 8px;
+    }
+    @media (max-width: 900px) {
+      .hamburger { display: block; }
+      .sidebar-overlay {
+        position: fixed; inset: 0;
+        background: #00000080;
+        z-index: 99;
+        display: none;
+      }
+      .sidebar-overlay.show { display: block; }
+    }
+
+    /* Logout confirm modal */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: #00000090;
+      z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-backdrop.show { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 36px;
+      max-width: 380px; width: 90%;
+      transform: scale(0.95); transition: transform 0.2s;
+      text-align: center;
+    }
+    .modal-backdrop.show .modal { transform: scale(1); }
+    .modal-icon { font-size: 40px; margin-bottom: 16px; }
+    .modal-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px; font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .modal-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; }
+    .modal-actions { display: flex; gap: 12px; }
+    .modal-actions .btn { flex: 1; }
+
+    /* Profile form */
+    .section-heading {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px; font-weight: 700;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DASHBOARD PAGE
+═══════════════════════════════════════════════════════════ -->
+<div class="page-wrapper dashboard-layout">
+
+  <!-- ───── Mobile overlay ───── -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- ───── Sidebar ───── -->
+  <aside class="sidebar" id="sidebar">
+
+    <a href="dashboard.html" class="sidebar-logo">
+      <div class="logo-icon">🔐</div>
+      <span class="logo-text">FaceAuth</span>
+    </a>
+
+    <div class="sidebar-section-label">Main</div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-page="overview">
+        <span class="nav-icon">🏠</span> Overview
+      </button>
+      <button class="nav-item" data-page="face-enroll">
+        <span class="nav-icon">📷</span> Face Enrollment
+      </button>
+      <button class="nav-item" data-page="activity">
+        <span class="nav-icon">📋</span> Login History
+      </button>
+  
+        <button class="nav-item" data-page="files">
+        <span class="nav-icon">📁</span>  My Files
+       </button>
+    </nav>
+    <div class="sidebar-section-label">Account</div>
+    <nav class="sidebar-nav">
+      <button class="nav-item" data-page="profile">
+        <span class="nav-icon">👤</span> My Profile
+      </button>
+      <button class="nav-item" data-page="security">
+        <span class="nav-icon">🛡️</span> Security
+      </button>
+    </nav>
+
+    <!-- User card + Logout -->
+    <div class="sidebar-footer">
+      <div class="user-card" id="user-card">
+        <div class="user-avatar" data-user-avatar>J</div>
+        <div class="user-info">
+          <div class="user-name" data-user-name>Loading...</div>
+          <div class="user-role" data-user-email>user@email.com</div>
+        </div>
+        <span style="font-size:16px; color:var(--text-muted)">⚙️</span>
+      </div>
+
+      <button class="btn btn-danger btn-sm" style="width:100%; margin-top:10px;" id="logout-btn">
+        🚪 Sign Out
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ───── Main area ───── -->
+  <div class="dashboard-main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger">☰</button>
+        <div>
+          <div class="page-title" id="topbar-title">Overview</div>
+          <div class="breadcrumb">Dashboard / <span id="topbar-breadcrumb">Overview</span></div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <a href="face-login.html" class="btn btn-secondary btn-sm">
+          📷 Face Login
+        </a>
+        <button class="icon-btn" title="Notifications">🔔</button>
+      </div>
+    </header>
+
+    <!-- ─────────────────────────────────────────
+         OVERVIEW page
+    ───────────────────────────────────────── -->
+    <div class="dashboard-content page-section active" id="page-overview">
+
+      <!-- Greeting -->
+      <div style="margin-bottom:28px;">
+        <div style="font-family:'Syne',sans-serif; font-size:24px; font-weight:700;">
+          Good <span id="greeting-time">morning</span>, <span data-user-name>User</span> 👋
+        </div>
+        <div style="font-size:14px; color:var(--text-secondary); margin-top:4px;">
+          Here's what's happening with your FaceAuth account today.
+        </div>
+      </div>
+
+      <!-- Stats cards -->
+      <div class="stats-grid">
+        <div class="stat-card" style="animation-delay:0.05s">
+          <div class="stat-icon blue">🔑</div>
+          <div class="stat-label">Total Logins</div>
+          <div class="stat-value" id="stat-logins">—</div>
+          <div class="stat-delta up" id="stat-logins-delta">⬆ Loading...</div>
+        </div>
+        <div class="stat-card" style="animation-delay:0.1s">
+          <div class="stat-icon green">✅</div>
+          <div class="stat-label">Face Verifications</div>
+          <div class="stat-value" id="stat-face">—</div>
+          <div class="stat-delta up" id="stat-face-delta">⬆ Loading...</div>
+        </div>
+        <div class="stat-card" style="animation-delay:0.15s">
+          <div class="stat-icon red">❌</div>
+          <div class="stat-label">Failed Attempts</div>
+          <div class="stat-value" id="stat-failed">—</div>
+          <div class="stat-delta down" id="stat-failed-delta">Loading...</div>
+        </div>
+        <div class="stat-card" style="animation-delay:0.2s">
+          <div class="stat-icon purple">🛡️</div>
+          <div class="stat-label">Security Score</div>
+          <div class="stat-value" id="stat-score">—</div>
+          <div class="stat-delta up" id="stat-score-delta">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Dashboard grid -->
+      <div class="dash-grid">
+
+        <!-- Recent activity -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Recent Login Activity</span>
+            <button class="btn btn-secondary btn-sm" onclick="switchPage('activity')">View All</button>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <table class="activity-table" id="recent-activity-table">
+              <thead>
+                <tr>
+                  <th>Method</th>
+                  <th>IP Address</th>
+                  <th>Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="recent-activity-body">
+                <tr><td colspan="4" style="text-align:center; padding:32px; color:var(--text-muted);">Loading activity...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Face status card -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Face ID Status</span>
+          </div>
+          <div class="card-body face-status-card" id="face-status-area">
+            <div class="face-icon-wrapper not-enrolled">😶</div>
+            <div class="face-status-title">Checking...</div>
+            <div class="face-status-desc">Loading your face enrollment status.</div>
+            <button class="btn btn-primary" onclick="switchPage('face-enroll')">
+              📷 &nbsp;Enroll Face
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────
+         FACE ENROLLMENT page
+    ───────────────────────────────────────── -->
+    <div class="dashboard-content page-section" id="page-face-enroll">
+
+      <div style="max-width:600px; margin:0 auto; text-align:center;">
+
+        <div style="font-family:'Syne',sans-serif; font-size:24px; font-weight:700; margin-bottom:8px;">
+          Face Enrollment 📷
+        </div>
+        <div style="font-size:14px; color:var(--text-secondary); margin-bottom:36px;">
+          Position your face clearly in the camera frame and capture.
+          Your face embedding will be stored securely.
+        </div>
+
+        <!-- Webcam -->
+        <div class="webcam-container" id="enroll-webcam-container">
+          <video id="enroll-video" autoplay playsinline muted></video>
+          <canvas id="enroll-canvas"></canvas>
+          <div class="webcam-overlay">
+            <div class="face-guide"></div>
+            <div class="scan-line"></div>
+          </div>
+          <!-- Result overlay -->
+          <div class="capture-result-overlay" id="enroll-result-overlay">
+            <span id="enroll-result-icon">✅</span>
+            <span id="enroll-result-text">Enrolled!</span>
+          </div>
+          <!-- Placeholder -->
+          <div class="webcam-placeholder" id="enroll-placeholder">
+            <span class="webcam-placeholder-icon">📷</span>
+            <span>Camera not started</span>
+          </div>
+        </div>
+
+        <!-- Status bar -->
+        <div class="status-bar" id="enroll-status-bar">
+          <div class="status-dot" id="enroll-status-dot"></div>
+          <span id="enroll-status-text">Click "Start Camera" to begin enrollment.</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="webcam-controls">
+          <button class="btn btn-secondary" id="enroll-start-btn">📷 Start Camera</button>
+          <button class="btn btn-primary hidden" id="enroll-capture-btn">📸 Capture &amp; Enroll</button>
+          <button class="btn btn-secondary hidden" id="enroll-retry-btn">🔄 Retake Photo</button>
+          <button class="btn btn-danger btn-sm hidden" id="enroll-stop-btn">⏹ Stop Camera</button>
+        </div>
+
+        <!-- Captured preview -->
+        <div id="enroll-preview-area" class="hidden" style="margin-top:20px;">
+          <div style="font-size:13px; color:var(--text-secondary); margin-bottom:8px;">Captured frame:</div>
+          <img id="enroll-preview-img" style="width:100%; border-radius:var(--radius-md); border:1px solid var(--border);" />
+          <button class="btn btn-success" id="enroll-submit-btn" style="margin-top:14px; width:100%;">
+            ✅ Submit Enrollment
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────
+         ACTIVITY / LOGIN HISTORY page
+    ───────────────────────────────────────── -->
+    <div class="dashboard-content page-section" id="page-activity">
+      <div class="section-heading">Login History 📋</div>
+      <div class="card">
+        <div class="card-body" style="padding:0;">
+          <table class="activity-table" id="full-activity-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Method</th>
+                <th>IP Address</th>
+                <th>Device</th>
+                <th>Date &amp; Time</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="full-activity-body">
+              <tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);">Loading history...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────
+         PROFILE page
+    ───────────────────────────────────────── -->
+    <div class="dashboard-content page-section" id="page-profile">
+      <div class="section-heading">My Profile 👤</div>
+      <div class="card profile-section" style="max-width:640px;">
+        <div class="profile-header">
+          <div class="profile-avatar-lg" data-user-avatar>J</div>
+          <div>
+            <div class="profile-meta-name" data-user-name>Loading...</div>
+            <div class="profile-meta-email" data-user-email>...</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <form id="profile-form">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <div class="input-wrapper">
+                <span class="input-icon">✏️</span>
+                <input type="text" id="profile-fullName" class="form-control" placeholder="Full name" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <div class="input-wrapper">
+                <span class="input-icon">👤</span>
+                <input type="text" id="profile-username" class="form-control" placeholder="Username" disabled style="opacity:0.5;" />
+              </div>
+              <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Username cannot be changed.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <div class="input-wrapper">
+                <span class="input-icon">📧</span>
+                <input type="email" id="profile-email" class="form-control" placeholder="Email address" />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="profile-save-btn" style="width:auto; padding:11px 28px;">
+              💾 Save Changes
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────
+         SECURITY page
+    ───────────────────────────────────────── -->
+    <div class="dashboard-content page-section" id="page-security">
+      <div class="section-heading">Security Settings 🛡️</div>
+      <div style="display:flex; flex-direction:column; gap:20px; max-width:640px;">
+
+        <!-- Change password -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">Change Password</span></div>
+          <div class="card-body">
+            <form id="change-password-form">
+              <div class="form-group">
+                <label class="form-label">Current Password</label>
+                <div class="input-wrapper">
+                  <span class="input-icon">🔑</span>
+                  <input type="password" id="current-password" class="form-control" placeholder="Current password" />
+                  <button type="button" class="input-toggle">👁️</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">New Password</label>
+                <div class="input-wrapper">
+                  <span class="input-icon">🔒</span>
+                  <input type="password" id="new-password" class="form-control" placeholder="New password (min 8 chars)" />
+                  <button type="button" class="input-toggle">👁️</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Confirm New Password</label>
+                <div class="input-wrapper">
+                  <span class="input-icon">🔒</span>
+                  <input type="password" id="confirm-new-password" class="form-control" placeholder="Repeat new password" />
+                  <button type="button" class="input-toggle">👁️</button>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width:auto; padding:11px 28px;" id="change-pw-btn">
+                🔄 Update Password
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Delete face data -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">Face Data</span></div>
+          <div class="card-body">
+            <p style="font-size:14px; color:var(--text-secondary); margin-bottom:16px;">
+              Remove your stored face embedding. You will need to re-enroll to use Face ID login.
+            </p>
+            <button class="btn btn-danger" id="delete-face-btn" style="width:auto; padding:11px 24px;">
+              🗑️ Delete Face Data
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────
+         FILES page
+    ───────────────────────────────────────── -->
+    <div class="dashboard-content page-section" id="page-files">
+      <div class="section-heading">My Files 📁</div>
+
+      <!-- Upload card -->
+      <div class="card" style="max-width:700px; margin-bottom:24px;">
+        <div class="card-header"><span class="card-title">Upload a File</span></div>
+        <div class="card-body">
+          <div id="file-drop-zone" style="
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-md);
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            margin-bottom: 16px;
+          ">
+            <div style="font-size: 40px; margin-bottom: 10px;">📂</div>
+            <div style="font-size: 15px; font-weight: 600; margin-bottom: 4px;">Drag & drop a file here</div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">or click to browse — max 50 MB</div>
+            <input type="file" id="file-input" style="display:none" />
+            <button class="btn btn-secondary btn-sm" id="file-browse-btn" type="button">Browse Files</button>
+          </div>
+
+          <!-- Selected file preview -->
+          <div id="file-selected-info" style="display:none; align-items:center; gap:12px; padding:12px; background:var(--surface-2,rgba(0,0,0,0.04)); border-radius:var(--radius-md); margin-bottom:14px;">
+            <span id="file-selected-icon" style="font-size:28px;">📁</span>
+            <div style="flex:1; min-width:0;">
+              <div id="file-selected-name" style="font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+              <div id="file-selected-size" style="font-size:12px; color:var(--text-secondary);"></div>
+            </div>
+            <button class="btn btn-danger btn-sm" id="file-clear-btn" type="button">✕</button>
+          </div>
+
+          <!-- Progress bar -->
+          <div id="file-progress-wrap" style="display:none; margin-bottom:14px;">
+            <div style="font-size:12px; color:var(--text-secondary); margin-bottom:6px;">Uploading...</div>
+            <div style="background:var(--border); border-radius:99px; height:6px; overflow:hidden;">
+              <div id="file-progress-bar" style="height:100%; background:var(--primary,#6366f1); width:0%; transition:width 0.3s;"></div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" id="file-upload-btn" disabled style="width:auto; padding:11px 28px;">
+            ⬆️ Upload File
+          </button>
+        </div>
+      </div>
+
+      <!-- Files list card -->
+      <div class="card" style="max-width:700px;">
+        <div class="card-header">
+          <span class="card-title">Uploaded Files</span>
+          <button class="btn btn-secondary btn-sm" id="files-refresh-btn">🔄 Refresh</button>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div id="files-list-area" style="min-height:120px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:14px; padding:40px;">
+            Loading files...
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .dashboard-main -->
+</div><!-- end .dashboard-layout -->
+
+<!-- Logout confirm modal -->
+<div class="modal-backdrop" id="logout-modal">
+  <div class="modal">
+    <div class="modal-icon">🚪</div>
+    <div class="modal-title">Sign Out?</div>
+    <div class="modal-desc">Your session will be ended. You'll need to sign in again to access your account.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancel-logout">Cancel</button>
+      <button class="btn btn-danger" id="confirm-logout">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="script.js"></script>
+<script>
+/* ──────────────────────────────────────────
+   DASHBOARD – logic
+────────────────────────────────────────── */
+
+requireAuth(); // Guard – redirects to index.html if no valid JWT
+populateUserUI();
+
+/* ─── Greeting time ─── */
+const hour = new Date().getHours();
+document.getElementById('greeting-time').textContent =
+  hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+
+/* ─── Mobile sidebar ─── */
+const sidebar  = document.getElementById('sidebar');
+const overlay  = document.getElementById('sidebar-overlay');
+const hamburger= document.getElementById('hamburger');
+
+hamburger.addEventListener('click', () => {
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('show');
+});
+overlay.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('show');
+});
+
+/* ─── Page navigation ─── */
+function switchPage(pageId) {
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  const section = document.getElementById(`page-${pageId}`);
+  if (section) section.classList.add('active');
+
+  const navBtn = document.querySelector(`[data-page="${pageId}"]`);
+  if (navBtn) navBtn.classList.add('active');
+
+  const titles = {
+    overview: 'Overview',
+    'face-enroll': 'Face Enrollment',
+    activity: 'Login History',
+    profile: 'My Profile',
+    security: 'Security',
+    files: 'My Files',
+  };
+  document.getElementById('topbar-title').textContent = titles[pageId] || pageId;
+  document.getElementById('topbar-breadcrumb').textContent = titles[pageId] || pageId;
+
+  // Load data when switching
+  if (pageId === 'overview') loadOverview();
+  if (pageId === 'activity') loadFullActivity();
+  if (pageId === 'profile') loadProfile();
+  if (pageId === 'files') loadFiles();
+}
+
+document.querySelectorAll('.nav-item[data-page]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    switchPage(btn.dataset.page);
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+  });
+});
+
+/* ─── Load overview data ─── */
+async function loadOverview() {
+  // Stats
+  const statsRes = await getDashboardStats();
+  if (statsRes.ok) {
+    const s = statsRes.data;
+    document.getElementById('stat-logins').textContent  = s.totalLogins ?? 0;
+    document.getElementById('stat-face').textContent    = s.faceVerifications ?? 0;
+    document.getElementById('stat-failed').textContent  = s.failedAttempts ?? 0;
+    document.getElementById('stat-score').textContent   = (s.securityScore ?? 0) + '%';
+    document.getElementById('stat-logins-delta').textContent  = `⬆ ${s.loginsThisWeek ?? 0} this week`;
+    document.getElementById('stat-face-delta').textContent    = `⬆ ${s.faceLoginsThisWeek ?? 0} this week`;
+    document.getElementById('stat-failed-delta').textContent  = `${s.failedThisWeek ?? 0} this week`;
+    document.getElementById('stat-score-delta').textContent   = `${s.scoreChange ?? 0}% from last week`;
+  }
+
+  // Recent activity (top 5)
+  const actRes = await getUserActivity();
+  const tbody = document.getElementById('recent-activity-body');
+  if (actRes.ok && actRes.data.length > 0) {
+    const rows = actRes.data.slice(0, 5);
+    tbody.innerHTML = rows.map(row => `
+      <tr>
+        <td>${row.method || '—'}</td>
+        <td>${row.ipAddress || '—'}</td>
+        <td>${formatDate(row.timestamp)}</td>
+        <td>
+          <span class="status-badge ${row.status === 'SUCCESS' ? 'success' : 'failed'}">
+            ${row.status === 'SUCCESS' ? '✅' : '❌'} ${row.status}
+          </span>
+        </td>
+      </tr>
+    `).join('');
+  } else {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-muted);">No activity yet.</td></tr>`;
+  }
+
+  // Face status
+  const faceRes = await getFaceStatus();
+  const faceArea = document.getElementById('face-status-area');
+  if (faceRes.ok) {
+    const enrolled = faceRes.data.enrolled;
+    faceArea.innerHTML = enrolled ? `
+      <div class="face-icon-wrapper enrolled">😊</div>
+      <div class="face-status-title text-success">Face ID Enrolled</div>
+      <div class="face-status-desc">Your face is registered. You can log in with Face ID anytime.</div>
+      <button class="btn btn-secondary" onclick="switchPage('face-enroll')">📷 Re-enroll</button>
+    ` : `
+      <div class="face-icon-wrapper not-enrolled">😶</div>
+      <div class="face-status-title text-danger">Not Enrolled</div>
+      <div class="face-status-desc">Enroll your face to enable biometric login.</div>
+      <button class="btn btn-primary" onclick="switchPage('face-enroll')">📷 Enroll Face</button>
+    `;
+  }
+}
+
+/* ─── Load full activity ─── */
+async function loadFullActivity() {
+  const res = await getUserActivity();
+  const tbody = document.getElementById('full-activity-body');
+  if (res.ok && res.data.length > 0) {
+    tbody.innerHTML = res.data.map((row, i) => `
+      <tr>
+        <td style="color:var(--text-muted)">${i + 1}</td>
+        <td>${row.method || '—'}</td>
+        <td>${row.ipAddress || '—'}</td>
+        <td style="font-size:12px; color:var(--text-muted)">${row.device || 'Unknown'}</td>
+        <td style="font-size:13px">${formatDate(row.timestamp, true)}</td>
+        <td>
+          <span class="status-badge ${row.status === 'SUCCESS' ? 'success' : 'failed'}">
+            ${row.status === 'SUCCESS' ? '✅' : '❌'} ${row.status}
+          </span>
+        </td>
+      </tr>
+    `).join('');
+  } else {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No login history found.</td></tr>`;
+  }
+}
+
+/* ─── Load profile ─── */
+function loadProfile() {
+  const user = getUser();
+  if (!user) return;
+  document.getElementById('profile-fullName').value = user.fullName || '';
+  document.getElementById('profile-username').value = user.username || '';
+  document.getElementById('profile-email').value    = user.email || '';
+}
+
+/* ─── Save profile ─── */
+document.getElementById('profile-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('profile-save-btn');
+  const fullName = document.getElementById('profile-fullName').value.trim();
+  const email    = document.getElementById('profile-email').value.trim();
+
+  if (!fullName || !isValidEmail(email)) {
+    showToast('Please fill in valid name and email.', 'error');
+    return;
+  }
+
+  setButtonLoading(btn, true);
+  const res = await apiFetch('/user/profile', 'PUT', { fullName, email });
+  setButtonLoading(btn, false);
+
+  if (res.ok) {
+    const user = getUser();
+    saveSession(getToken(), { ...user, fullName, email });
+    populateUserUI();
+    showToast('Profile updated successfully!', 'success');
+  } else {
+    showToast(res.data.message || 'Update failed.', 'error');
+  }
+});
+
+/* ─── Change password ─── */
+document.getElementById('change-password-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn         = document.getElementById('change-pw-btn');
+  const currentPw   = document.getElementById('current-password').value;
+  const newPw       = document.getElementById('new-password').value;
+  const confirmPw   = document.getElementById('confirm-new-password').value;
+
+  if (!currentPw || !newPw || !confirmPw) {
+    showToast('All password fields are required.', 'error'); return;
+  }
+  if (newPw.length < 8) {
+    showToast('New password must be at least 8 characters.', 'error'); return;
+  }
+  if (newPw !== confirmPw) {
+    showToast('New passwords do not match.', 'error'); return;
+  }
+
+  setButtonLoading(btn, true);
+  const res = await apiFetch('/user/change-password', 'PUT', {
+    currentPassword: currentPw,
+    newPassword: newPw
+  });
+  setButtonLoading(btn, false);
+
+  if (res.ok) {
+    showToast('Password changed successfully!', 'success');
+    this.reset();
+  } else if (res.status === 401) {
+    showToast('Current password is incorrect.', 'error');
+  } else {
+    showToast(res.data.message || 'Password change failed.', 'error');
+  }
+});
+
+/* ─── Delete face data ─── */
+document.getElementById('delete-face-btn').addEventListener('click', async function() {
+  if (!confirm('Are you sure you want to delete your face data? This cannot be undone.')) return;
+
+  setButtonLoading(this, true);
+  const res = await apiFetch('/face/delete', 'DELETE', null);
+  setButtonLoading(this, false);
+
+  if (res.ok) {
+    showToast('Face data deleted successfully.', 'success');
+  } else {
+    showToast(res.data.message || 'Failed to delete face data.', 'error');
+  }
+});
+
+/* ─── Logout modal ─── */
+const logoutModal = document.getElementById('logout-modal');
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+  logoutModal.classList.add('show');
+});
+document.getElementById('cancel-logout').addEventListener('click', () => {
+  logoutModal.classList.remove('show');
+});
+document.getElementById('confirm-logout').addEventListener('click', () => {
+  logoutUser(); // defined in script.js
+});
+
+/* ─── Webcam enrollment ─── */
+let enrollStream = null;
+
+const enrollVideo     = document.getElementById('enroll-video');
+const enrollCanvas    = document.getElementById('enroll-canvas');
+const enrollContainer = document.getElementById('enroll-webcam-container');
+const enrollPlaceholder = document.getElementById('enroll-placeholder');
+const enrollStatusDot  = document.getElementById('enroll-status-dot');
+const enrollStatusText = document.getElementById('enroll-status-text');
+const enrollStartBtn   = document.getElementById('enroll-start-btn');
+const enrollCaptureBtn = document.getElementById('enroll-capture-btn');
+const enrollRetryBtn   = document.getElementById('enroll-retry-btn');
+const enrollStopBtn    = document.getElementById('enroll-stop-btn');
+const enrollPreviewArea= document.getElementById('enroll-preview-area');
+const enrollPreviewImg = document.getElementById('enroll-preview-img');
+const enrollSubmitBtn  = document.getElementById('enroll-submit-btn');
+const enrollResultOverlay= document.getElementById('enroll-result-overlay');
+
+function setEnrollStatus(dot, text) {
+  enrollStatusDot.className = `status-dot ${dot}`;
+  enrollStatusText.textContent = text;
+}
+
+enrollStartBtn.addEventListener('click', async () => {
+  try {
+    enrollStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    enrollVideo.srcObject = enrollStream;
+    enrollPlaceholder.style.display = 'none';
+    enrollContainer.classList.add('scanning');
+    enrollStartBtn.classList.add('hidden');
+    enrollCaptureBtn.classList.remove('hidden');
+    enrollStopBtn.classList.remove('hidden');
+    setEnrollStatus('scanning', 'Camera active – position your face in the circle and capture.');
+  } catch (err) {
+    showToast('Camera access denied or not available.', 'error');
+    setEnrollStatus('error', 'Camera error: ' + err.message);
+  }
+});
+
+enrollCaptureBtn.addEventListener('click', () => {
+  const ctx = enrollCanvas.getContext('2d');
+  enrollCanvas.width  = enrollVideo.videoWidth;
+  enrollCanvas.height = enrollVideo.videoHeight;
+  ctx.save();
+  ctx.scale(-1, 1);
+  ctx.drawImage(enrollVideo, -enrollCanvas.width, 0);
+  ctx.restore();
+
+  const dataUrl = enrollCanvas.toDataURL('image/jpeg', 0.9);
+  enrollPreviewImg.src = dataUrl;
+  enrollPreviewArea.classList.remove('hidden');
+  enrollCaptureBtn.classList.add('hidden');
+  enrollRetryBtn.classList.remove('hidden');
+  enrollContainer.classList.remove('scanning');
+  setEnrollStatus('active', 'Photo captured! Review and click "Submit Enrollment".');
+});
+
+enrollRetryBtn.addEventListener('click', () => {
+  enrollPreviewArea.classList.add('hidden');
+  enrollRetryBtn.classList.add('hidden');
+  enrollCaptureBtn.classList.remove('hidden');
+  enrollContainer.classList.add('scanning');
+  setEnrollStatus('scanning', 'Camera active – capture again.');
+});
+
+enrollStopBtn.addEventListener('click', () => {
+  if (enrollStream) {
+    enrollStream.getTracks().forEach(t => t.stop());
+    enrollStream = null;
+  }
+  enrollVideo.srcObject = null;
+  enrollPlaceholder.style.display = 'flex';
+  enrollContainer.className = 'webcam-container';
+  enrollStartBtn.classList.remove('hidden');
+  enrollCaptureBtn.classList.add('hidden');
+  enrollRetryBtn.classList.add('hidden');
+  enrollStopBtn.classList.add('hidden');
+  enrollPreviewArea.classList.add('hidden');
+  setEnrollStatus('', 'Camera stopped.');
+});
+
+enrollSubmitBtn.addEventListener('click', async () => {
+  const base64 = enrollPreviewImg.src.split(',')[1];
+  if (!base64) { showToast('No image captured.', 'error'); return; }
+
+  setButtonLoading(enrollSubmitBtn, true);
+  const res = await enrollFace(base64);
+  setButtonLoading(enrollSubmitBtn, false);
+
+  if (res.ok) {
+    enrollResultOverlay.className = 'capture-result-overlay success show';
+    document.getElementById('enroll-result-icon').textContent = '✅';
+    document.getElementById('enroll-result-text').textContent = 'Enrolled!';
+    setEnrollStatus('active', 'Face enrolled successfully! You can now use Face ID login.');
+    showToast('Face enrolled successfully!', 'success');
+    setTimeout(() => enrollResultOverlay.classList.remove('show'), 2500);
+  } else {
+    enrollResultOverlay.className = 'capture-result-overlay error show';
+    document.getElementById('enroll-result-icon').textContent = '❌';
+    document.getElementById('enroll-result-text').textContent = 'Failed';
+    showToast(res.data.message || 'Enrollment failed.', 'error');
+    setTimeout(() => enrollResultOverlay.classList.remove('show'), 2500);
+  }
+});
+
+/* ─── Date formatter ─── */
+function formatDate(ts, full = false) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  if (full) return d.toLocaleString();
+  const diff = Date.now() - d.getTime();
+  if (diff < 60000)   return 'Just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000)return `${Math.floor(diff / 3600000)}h ago`;
+  return d.toLocaleDateString();
+}
+
+/* ─── FILES feature ─── */
+let selectedFile = null;
+
+const fileInput      = document.getElementById('file-input');
+const fileBrowseBtn  = document.getElementById('file-browse-btn');
+const fileDropZone   = document.getElementById('file-drop-zone');
+const fileSelectedInfo = document.getElementById('file-selected-info');
+const fileSelectedIcon = document.getElementById('file-selected-icon');
+const fileSelectedName = document.getElementById('file-selected-name');
+const fileSelectedSize = document.getElementById('file-selected-size');
+const fileClearBtn   = document.getElementById('file-clear-btn');
+const fileUploadBtn  = document.getElementById('file-upload-btn');
+const fileProgressWrap = document.getElementById('file-progress-wrap');
+const fileProgressBar  = document.getElementById('file-progress-bar');
+
+fileBrowseBtn.addEventListener('click', () => fileInput.click());
+fileDropZone.addEventListener('click', (e) => { if (e.target !== fileBrowseBtn) fileInput.click(); });
+
+fileDropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  fileDropZone.style.borderColor = 'var(--primary, #6366f1)';
+  fileDropZone.style.background  = 'rgba(99,102,241,0.04)';
+});
+fileDropZone.addEventListener('dragleave', () => {
+  fileDropZone.style.borderColor = 'var(--border)';
+  fileDropZone.style.background  = '';
+});
+fileDropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  fileDropZone.style.borderColor = 'var(--border)';
+  fileDropZone.style.background  = '';
+  const f = e.dataTransfer.files[0];
+  if (f) selectFile(f);
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) selectFile(fileInput.files[0]);
+});
+
+fileClearBtn.addEventListener('click', () => {
+  selectedFile = null;
+  fileInput.value = '';
+  fileSelectedInfo.style.display = 'none';
+  fileUploadBtn.disabled = true;
+});
+
+function selectFile(f) {
+  if (f.size > 50 * 1024 * 1024) {
+    showToast('File exceeds 50 MB limit.', 'error');
+    return;
+  }
+  selectedFile = f;
+  fileSelectedIcon.textContent = getFileIcon(f.name);
+  fileSelectedName.textContent = f.name;
+  fileSelectedSize.textContent = formatFileSize(f.size);
+  fileSelectedInfo.style.display = 'flex';
+  fileUploadBtn.disabled = false;
+}
+
+fileUploadBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  const user = getUser();
+  if (!user || !user.id) { showToast('Session error – please log in again.', 'error'); return; }
+
+  fileUploadBtn.disabled = true;
+  fileProgressWrap.style.display = 'block';
+  fileProgressBar.style.width = '20%';
+
+  // Animate progress a bit while waiting
+  let fakeProgress = 20;
+  const ticker = setInterval(() => {
+    fakeProgress = Math.min(fakeProgress + 10, 85);
+    fileProgressBar.style.width = fakeProgress + '%';
+  }, 300);
+
+  const res = await uploadFile(selectedFile, user.id);
+
+  clearInterval(ticker);
+  fileProgressBar.style.width = '100%';
+
+  setTimeout(() => {
+    fileProgressWrap.style.display = 'none';
+    fileProgressBar.style.width = '0%';
+  }, 600);
+
+  if (res.ok) {
+    showToast('File uploaded successfully! 🎉', 'success');
+    fileClearBtn.click();
+    loadFiles();
+  } else {
+    showToast(res.data?.message || 'Upload failed.', 'error');
+    fileUploadBtn.disabled = false;
+  }
+});
+
+document.getElementById('files-refresh-btn').addEventListener('click', loadFiles);
+
+async function loadFiles() {
+  const user = getUser();
+  const area = document.getElementById('files-list-area');
+  if (!user || !user.id) {
+    area.innerHTML = '<span style="color:var(--text-muted)">Session error.</span>';
+    return;
+  }
+  area.innerHTML = '<span style="color:var(--text-muted)">Loading files...</span>';
+  const res = await getUserFiles(user.id);
+
+  if (!res.ok) {
+    area.innerHTML = `<span style="color:var(--text-muted)">${res.data?.message || 'Failed to load files.'}</span>`;
+    return;
+  }
+
+  const files = res.data;
+  if (!files || files.length === 0) {
+    area.innerHTML = '<span style="color:var(--text-muted)">No files uploaded yet. Upload your first file above!</span>';
+    return;
+  }
+
+  area.innerHTML = `
+    <table class="activity-table" style="width:100%">
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Size</th>
+          <th>Uploaded</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${files.map(f => `
+          <tr>
+            <td style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
+              <span style="font-size:22px">${getFileIcon(f.fileName)}</span>
+              <span style="font-size:13px; font-weight:500; word-break:break-all">${f.fileName}</span>
+            </td>
+            <td style="font-size:13px; color:var(--text-secondary)">${formatFileSize(f.fileSize)}</td>
+            <td style="font-size:12px; color:var(--text-muted)">${formatDate(f.uploadTime, true)}</td>
+            <td style="text-align:right; padding-right:16px;">
+              <button class="btn btn-secondary btn-sm" style="margin-right:6px"
+                onclick="handleFileDownload('${f.storedFileName}', '${f.fileName}')">⬇️ Download</button>
+              <button class="btn btn-danger btn-sm"
+                onclick="handleFileDelete(${f.id})">🗑️</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function handleFileDelete(fileId) {
+  if (!confirm('Delete this file? This cannot be undone.')) return;
+  const res = await deleteUserFile(fileId);
+  if (res.ok) {
+    showToast('File deleted.', 'success');
+    loadFiles();
+  } else {
+    showToast(res.data?.message || 'Delete failed.', 'error');
+  }
+}
+
+function handleFileDownload(storedFileName, originalName) {
+  const url = getFileDownloadUrl(storedFileName, getUser()?.id);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = originalName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/* ─── Init ─── */
+loadOverview();
+</script>
+</body>
+</html>

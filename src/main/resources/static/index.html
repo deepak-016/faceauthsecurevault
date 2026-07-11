@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login – FaceAuth</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Favicon emoji shortcut -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOGIN PAGE
+═══════════════════════════════════════════════════════════ -->
+<div class="page-wrapper auth-layout">
+
+  <!-- ───── Left decorative panel ───── -->
+  <aside class="auth-panel">
+    <div class="auth-panel-logo">
+      <div class="logo-icon">🔐</div>
+      <span class="logo-text">FaceAuth</span>
+    </div>
+
+    <h1 class="auth-panel-heading">
+      Secure Login<br />with <span>Face ID</span>
+    </h1>
+    <p class="auth-panel-sub">
+      Your face is your password. No pins, no secrets – just you.
+      Powered by biometric AI and JWT authentication.
+    </p>
+
+    <ul class="auth-panel-features">
+      <li class="feature-item"><span class="feature-dot"></span> Real-time face verification via webcam</li>
+      <li class="feature-item"><span class="feature-dot"></span> JWT token-secured sessions</li>
+      <li class="feature-item"><span class="feature-dot"></span> Spring Boot + MySQL backend</li>
+      <li class="feature-item"><span class="feature-dot"></span> Password fallback always available</li>
+    </ul>
+  </aside>
+
+  <!-- ───── Right form area ───── -->
+  <main class="auth-main">
+    <div class="auth-card">
+
+      <div class="auth-card-header">
+        <h2 class="auth-card-title">Welcome back 👋</h2>
+        <p class="auth-card-subtitle">Sign in to your FaceAuth account</p>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" novalidate>
+
+        <!-- Username -->
+        <div class="form-group">
+          <label class="form-label" for="username">Username or Email</label>
+          <div class="input-wrapper">
+            <span class="input-icon">👤</span>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              class="form-control"
+              placeholder="e.g. john_doe"
+              autocomplete="username"
+            />
+          </div>
+          <div class="form-error" id="username-error"></div>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔑</span>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-control"
+              placeholder="Your password"
+              autocomplete="current-password"
+            />
+            <button type="button" class="input-toggle" aria-label="Toggle password">👁️</button>
+          </div>
+          <div class="form-error" id="password-error"></div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn btn-primary btn-lg" id="login-btn">
+          Sign In
+        </button>
+
+      </form>
+
+      <!-- Divider -->
+      <div class="auth-divider">or continue with</div>
+
+      <!-- Face Login Button -->
+      <a href="face-login.html" class="btn btn-secondary">
+        📷 &nbsp;Sign in with Face ID
+      </a>
+
+      <!-- Register link -->
+      <div class="auth-link">
+        Don't have an account? <a href="register.html">Create one</a>
+      </div>
+
+    </div>
+  </main>
+
+</div><!-- end .auth-layout -->
+
+<!-- Toast container injected by script.js -->
+<div id="toast-container"></div>
+<script src="script.js"></script>
+
+<script>
+
+const form = document.getElementById('login-form');
+
+form.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = document.getElementById('login-btn');
+
+  if (!username) { alert('Enter Username'); return; }
+  if (!password) { alert('Enter Password'); return; }
+
+  setButtonLoading(btn, true);
+  const result = await loginUser({ username, password });
+  setButtonLoading(btn, false);
+
+  if (result.ok) {
+    saveSession(result.data.token, result.data.user);
+    showToast('Login successful! Redirecting...', 'success');
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+  } else {
+    showToast(result.data.message || 'Invalid username or password.', 'error');
+  }
+});
+
+</script>
+</body>
+</html>

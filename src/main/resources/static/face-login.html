@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Face Login – FaceAuth</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>" />
+  <style>
+    /* Steps indicator */
+    .steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 36px;
+      justify-content: center;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .step-circle {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+      color: var(--text-muted);
+      font-family: 'Syne', sans-serif;
+      transition: all 0.3s ease;
+    }
+    .step.active .step-circle {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 12px #2e7aff60;
+    }
+    .step.done .step-circle {
+      background: var(--success);
+      border-color: var(--success);
+      color: #fff;
+    }
+    .step-label { font-size: 11px; color: var(--text-muted); }
+    .step.active .step-label { color: var(--accent); }
+    .step.done   .step-label { color: var(--success); }
+    .step-line {
+      height: 2px; width: 60px;
+      background: var(--border);
+      margin-bottom: 18px;
+      transition: background 0.3s;
+    }
+    .step-line.done { background: var(--success); }
+
+    /* Countdown ring */
+    .countdown-ring {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120px; height: 120px;
+      pointer-events: none;
+      display: none;
+    }
+    .countdown-ring.show { display: block; }
+    .countdown-ring svg { width: 100%; height: 100%; }
+    .countdown-ring text {
+      font-family: 'Syne', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      fill: var(--accent);
+      dominant-baseline: middle;
+      text-anchor: middle;
+    }
+    circle.ring-track {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 3;
+    }
+    circle.ring-progress {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 326.7;
+      stroke-dashoffset: 0;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+      transition: stroke-dashoffset 1s linear;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FACE LOGIN PAGE
+═══════════════════════════════════════════════════════════ -->
+<div class="page-wrapper face-auth-wrapper">
+
+  <a href="index.html" class="back-link">← Back to Password Login</a>
+
+  <div class="face-auth-card">
+
+    <!-- Logo -->
+    <div class="face-header-logo">
+      <div class="logo-icon" style="width:38px;height:38px;background:linear-gradient(135deg,var(--accent),var(--accent-hover));border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 16px #2e7aff40;">🔐</div>
+      <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:20px;">FaceAuth</span>
+    </div>
+
+    <h1 class="face-auth-title">Face ID Login 📷</h1>
+    <p class="face-auth-subtitle">
+      Enter your username, start the camera, and let your face verify you.
+    </p>
+
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step active" id="step-1">
+        <div class="step-circle">1</div>
+        <div class="step-label">Username</div>
+      </div>
+      <div class="step-line" id="line-1"></div>
+      <div class="step" id="step-2">
+        <div class="step-circle">2</div>
+        <div class="step-label">Camera</div>
+      </div>
+      <div class="step-line" id="line-2"></div>
+      <div class="step" id="step-3">
+        <div class="step-circle">3</div>
+        <div class="step-label">Verify</div>
+      </div>
+    </div>
+
+    <!-- Step 1: Username input -->
+    <div id="phase-username">
+      <div class="face-user-input form-group">
+        <label class="form-label" for="face-username">Your Username</label>
+        <div class="input-wrapper">
+          <span class="input-icon">👤</span>
+          <input
+            type="text"
+            id="face-username"
+            class="form-control"
+            placeholder="Enter your username"
+            autocomplete="username"
+          />
+        </div>
+        <div class="form-error" id="face-username-error"></div>
+      </div>
+      <button class="btn btn-primary" id="face-next-btn">
+        Next – Start Camera →
+      </button>
+    </div>
+
+    <!-- Step 2 & 3: Webcam + verify -->
+    <div id="phase-camera" class="hidden">
+
+      <!-- Webcam container -->
+      <div class="webcam-container" id="face-webcam-container">
+        <video id="face-video" autoplay playsinline muted></video>
+        <canvas id="face-canvas"></canvas>
+        <div class="webcam-overlay">
+          <div class="face-guide"></div>
+          <div class="scan-line"></div>
+        </div>
+        <!-- Countdown ring for auto-capture -->
+        <div class="countdown-ring" id="countdown-ring">
+          <svg viewBox="0 0 110 110">
+            <circle class="ring-track" cx="55" cy="55" r="52" />
+            <circle class="ring-progress" id="ring-progress" cx="55" cy="55" r="52" />
+            <text x="55" y="55" id="countdown-text">3</text>
+          </svg>
+        </div>
+        <!-- Result overlay -->
+        <div class="capture-result-overlay" id="face-result-overlay">
+          <span id="face-result-icon">✅</span>
+          <span id="face-result-text">Verified!</span>
+        </div>
+        <!-- Placeholder -->
+        <div class="webcam-placeholder" id="face-placeholder">
+          <span class="webcam-placeholder-icon">📷</span>
+          <span>Starting camera...</span>
+        </div>
+      </div>
+
+      <!-- Status bar -->
+      <div class="status-bar">
+        <div class="status-dot" id="face-status-dot"></div>
+        <span id="face-status-text">Initialising camera...</span>
+      </div>
+
+      <!-- Controls -->
+      <div class="webcam-controls">
+        <button class="btn btn-primary hidden" id="face-capture-btn">
+          📸 Capture &amp; Verify Now
+        </button>
+        <button class="btn btn-secondary hidden" id="face-auto-btn">
+          ⏱ Auto-capture in 3s
+        </button>
+        <button class="btn btn-secondary btn-sm" id="face-retry-btn">
+          🔄 Try Again
+        </button>
+      </div>
+
+    </div>
+    <!-- end phase-camera -->
+
+    <!-- Link to password login -->
+    <div class="auth-link" style="margin-top:20px;">
+      Prefer password? <a href="index.html">Sign in with password</a>
+    </div>
+    <div class="auth-link" style="margin-top:8px;">
+      No account yet? <a href="register.html">Register</a>
+    </div>
+
+  </div><!-- end .face-auth-card -->
+</div>
+
+<div id="toast-container"></div>
+
+<script src="script.js"></script>
+<script>
+/* ──────────────────────────────────────────
+   FACE LOGIN PAGE – logic
+────────────────────────────────────────── */
+
+// page ready
+
+/* ─── DOM refs ─── */
+const phaseUsername      = document.getElementById('phase-username');
+const phaseCamera        = document.getElementById('phase-camera');
+const faceUsernameInput  = document.getElementById('face-username');
+const faceNextBtn        = document.getElementById('face-next-btn');
+const faceVideo          = document.getElementById('face-video');
+const faceCanvas         = document.getElementById('face-canvas');
+const faceContainer      = document.getElementById('face-webcam-container');
+const facePlaceholder    = document.getElementById('face-placeholder');
+const faceStatusDot      = document.getElementById('face-status-dot');
+const faceStatusText     = document.getElementById('face-status-text');
+const faceCaptureBtn     = document.getElementById('face-capture-btn');
+const faceAutoBtn        = document.getElementById('face-auto-btn');
+const faceRetryBtn       = document.getElementById('face-retry-btn');
+const faceResultOverlay  = document.getElementById('face-result-overlay');
+const countdownRing      = document.getElementById('countdown-ring');
+const countdownText      = document.getElementById('countdown-text');
+const ringProgress       = document.getElementById('ring-progress');
+
+let faceStream   = null;
+let capturedUsername = '';
+let autoTimer    = null;
+
+/* ─── Step helper ─── */
+function setStep(n) {
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById(`step-${i}`);
+    el.classList.remove('active', 'done');
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add('active');
+  }
+  for (let i = 1; i <= 2; i++) {
+    const line = document.getElementById(`line-${i}`);
+    line.classList.toggle('done', i < n);
+  }
+}
+
+function setFaceStatus(dot, text) {
+  faceStatusDot.className = `status-dot ${dot}`;
+  faceStatusText.textContent = text;
+}
+
+/* ─── STEP 1 → STEP 2: Start camera ─── */
+faceNextBtn.addEventListener('click', async () => {
+  const username = faceUsernameInput.value.trim();
+  if (!username) {
+    setFieldError(faceUsernameInput, 'Please enter your username.');
+    return;
+  }
+  clearFieldError(faceUsernameInput);
+  capturedUsername = username;
+
+  setButtonLoading(faceNextBtn, true);
+
+  try {
+    faceStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    faceVideo.srcObject = faceStream;
+
+    phaseUsername.classList.add('hidden');
+    phaseCamera.classList.remove('hidden');
+    facePlaceholder.style.display = 'none';
+    faceContainer.classList.add('scanning');
+    setStep(2);
+    setFaceStatus('scanning', `Camera ready for user "${username}". Click capture or use auto-capture.`);
+
+    faceCaptureBtn.classList.remove('hidden');
+    faceAutoBtn.classList.remove('hidden');
+    setButtonLoading(faceNextBtn, false);
+  } catch (err) {
+    setButtonLoading(faceNextBtn, false);
+    showToast('Could not access camera: ' + err.message, 'error');
+  }
+});
+
+faceUsernameInput.addEventListener('input', () => clearFieldError(faceUsernameInput));
+
+/* ─── Manual capture ─── */
+faceCaptureBtn.addEventListener('click', captureAndVerify);
+
+/* ─── Auto-capture with countdown ─── */
+faceAutoBtn.addEventListener('click', function() {
+  if (autoTimer) return;
+  faceCaptureBtn.classList.add('hidden');
+  faceAutoBtn.disabled = true;
+  countdownRing.classList.add('show');
+
+  let count = 3;
+  const totalDash = 326.7;
+  countdownText.textContent = count;
+  ringProgress.style.strokeDashoffset = '0';
+
+  autoTimer = setInterval(() => {
+    count--;
+    countdownText.textContent = count;
+    // shrink ring
+    const offset = totalDash * ((3 - count) / 3);
+    ringProgress.style.strokeDashoffset = offset;
+
+    if (count <= 0) {
+      clearInterval(autoTimer);
+      autoTimer = null;
+      countdownRing.classList.remove('show');
+      captureAndVerify();
+    }
+  }, 1000);
+});
+
+/* ─── Retry ─── */
+faceRetryBtn.addEventListener('click', () => {
+  faceContainer.classList.remove('verified', 'failed');
+  faceContainer.classList.add('scanning');
+  faceResultOverlay.classList.remove('show');
+  faceCaptureBtn.classList.remove('hidden');
+  faceAutoBtn.classList.remove('hidden');
+  faceAutoBtn.disabled = false;
+  clearInterval(autoTimer); autoTimer = null;
+  countdownRing.classList.remove('show');
+  setFaceStatus('scanning', `Ready – aim your face at the camera.`);
+  setStep(2);
+});
+
+/* ─── Core: capture frame + verify ─── */
+async function captureAndVerify() {
+  // Stop auto timer if running
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  countdownRing.classList.remove('show');
+  faceCaptureBtn.classList.add('hidden');
+  faceAutoBtn.classList.add('hidden');
+
+  setStep(3);
+  setFaceStatus('scanning', 'Analysing your face... please hold still.');
+
+  // Draw mirrored frame to canvas
+  const ctx = faceCanvas.getContext('2d');
+  faceCanvas.width  = faceVideo.videoWidth;
+  faceCanvas.height = faceVideo.videoHeight;
+  ctx.save();
+  ctx.scale(-1, 1);
+  ctx.drawImage(faceVideo, -faceCanvas.width, 0);
+  ctx.restore();
+
+  const base64 = faceCanvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+
+  // Call backend
+  const res = await verifyFace(capturedUsername, base64);
+
+  if (res.ok && res.data.verified) {
+    /*
+      Expected Spring Boot response on success:
+      {
+        "verified": true,
+        "token": "eyJhbGci...",
+        "user": { "id": 1, "username": "...", "fullName": "...", "email": "..." },
+        "confidence": 0.97
+      }
+    */
+    faceContainer.classList.remove('scanning');
+    faceContainer.classList.add('verified');
+    faceResultOverlay.className = 'capture-result-overlay success show';
+    document.getElementById('face-result-icon').textContent = '✅';
+    document.getElementById('face-result-text').textContent = 'Identity Confirmed!';
+    setFaceStatus('active', `Welcome, ${res.data.user?.fullName || capturedUsername}! Redirecting...`);
+    showToast(`Face verified! Confidence: ${Math.round((res.data.confidence || 1) * 100)}%`, 'success');
+
+    // Save session and redirect
+    saveSession(res.data.token, res.data.user);
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1500);
+
+    // Stop camera
+    if (faceStream) faceStream.getTracks().forEach(t => t.stop());
+  } else {
+    faceContainer.classList.remove('scanning');
+    faceContainer.classList.add('failed');
+    faceResultOverlay.className = 'capture-result-overlay error show';
+    document.getElementById('face-result-icon').textContent = '❌';
+    document.getElementById('face-result-text').textContent = 'Not Recognised';
+
+    const reason = res.data?.message || 'Face not recognised. Please try again.';
+    setFaceStatus('error', reason);
+
+    if (res.status === 404) {
+      showToast('User not found or face not enrolled.', 'error', 5000);
+    } else {
+      showToast(reason, 'error', 4000);
+    }
+
+    // Auto-reset after 3s
+    setTimeout(() => {
+      if (faceStream?.active) {
+        faceResultOverlay.classList.remove('show');
+        faceContainer.classList.remove('failed');
+        faceContainer.classList.add('scanning');
+        faceCaptureBtn.classList.remove('hidden');
+        faceAutoBtn.classList.remove('hidden');
+        faceAutoBtn.disabled = false;
+        setFaceStatus('scanning', 'Ready to try again.');
+        setStep(2);
+      }
+    }, 3000);
+  }
+}
+
+/* ─── Cleanup on page leave ─── */
+window.addEventListener('beforeunload', () => {
+  if (faceStream) faceStream.getTracks().forEach(t => t.stop());
+});
+</script>
+</body>
+</html>
