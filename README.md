@@ -96,10 +96,7 @@ src/main/resources/
 ---
 
 ## Screenshots
-
-(Add screenshots or a short screen-recording GIF of the login, dashboard, and face enrollment screens here.)
-
----
+//soon
 
 ## Notes
 
