@@ -2,7 +2,7 @@
    FaceAuth – shared utilities (script.js)
 ═══════════════════════════════════════ */
 
-const API = 'http://localhost:8086';
+const API = '';
 
 /* ─── Session helpers ─── */
 function saveSession(token, user) {
