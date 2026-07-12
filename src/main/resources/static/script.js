@@ -210,7 +210,8 @@ async function uploadFile(file, userId) {
       body: formData
     });
     let data = {};
-    try { data = await res.json(); } catch(e) { data = { message: await res.text() }; }
+    const rawText = await res.text();
+    try { data = JSON.parse(rawText); } catch (e) { data = { message: rawText }; }
     return { ok: res.ok, status: res.status, data };
   } catch (err) {
     console.error('[uploadFile] fetch threw:', err);
