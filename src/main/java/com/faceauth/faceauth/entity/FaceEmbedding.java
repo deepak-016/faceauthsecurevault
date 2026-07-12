@@ -15,6 +15,7 @@ public class FaceEmbedding {
 
     @Lob
     @Column(nullable = false)
+    @Column(columnDefinition = "MEDIUMBLOB")
     private byte[] embedding;
 
     public Long getId() { return id; }
