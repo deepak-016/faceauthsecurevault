@@ -215,53 +215,6 @@
 
 <div id="toast-container"></div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     FACE ENROLL MODAL
-     Shown after successful registration so the user can see
-     themselves on camera before we capture.
-═══════════════════════════════════════════════════════════ -->
-<div id="enroll-modal" style="
-  display:none; position:fixed; inset:0; z-index:9999;
-  background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);
-  align-items:center; justify-content:center;">
-  <div style="
-    background:var(--surface-1); border:1px solid var(--border);
-    border-radius:20px; padding:32px; max-width:460px; width:90%;
-    text-align:center; box-shadow:0 24px 60px rgba(0,0,0,0.5);">
-
-    <div style="font-size:40px; margin-bottom:8px;">📷</div>
-    <h2 style="font-size:20px; font-weight:700; margin:0 0 6px;">Enroll Your Face</h2>
-    <p style="font-size:14px; color:var(--text-secondary); margin:0 0 20px;">
-      Look straight at the camera, then click <strong>Capture</strong>.
-    </p>
-
-    <!-- Live preview must be in the DOM so the browser renders frames -->
-    <video id="enroll-video" autoplay playsinline muted
-      style="width:100%; border-radius:12px; background:#000; margin-bottom:12px; display:block;"></video>
-
-    <canvas id="enroll-canvas" style="display:none;"></canvas>
-
-    <div id="enroll-status" style="
-      display:none; padding:10px 14px; border-radius:8px;
-      font-size:13px; margin-bottom:14px;"></div>
-
-    <div style="display:flex; gap:10px;">
-      <button id="enroll-capture-btn" style="
-        flex:1; padding:13px; border-radius:10px; border:none;
-        background:var(--accent); color:#fff; font-size:15px;
-        font-weight:600; cursor:pointer;">
-        📸 Capture &amp; Enroll
-      </button>
-      <button id="enroll-skip-btn" style="
-        flex:1; padding:13px; border-radius:10px;
-        border:1px solid var(--border); background:var(--surface-2);
-        color:var(--text-primary); font-size:15px; cursor:pointer;">
-        Skip for now
-      </button>
-    </div>
-  </div>
-</div>
-
 <script src="script.js"></script>
 <script>
 /* ──────────────────────────────────────────
@@ -300,142 +253,13 @@ pwdInput.addEventListener('input', function() {
 });
 
 /* ════════════════════════════════════════════
-   FACE ENROLL MODAL logic
-   Opens AFTER registration succeeds.
-   The <video> is in the DOM so the browser
-   actually renders frames before we capture.
-════════════════════════════════════════════ */
-let _enrollUsername = '';
-let _enrollStream   = null;
-
-function enrollSetStatus(msg, type) {
-  const s = document.getElementById('enroll-status');
-  s.textContent = msg;
-  s.style.display = 'block';
-  const colors = {
-    info:    { bg: '#3b82f620', color: '#3b82f6' },
-    success: { bg: '#10b98120', color: '#10b981' },
-    error:   { bg: '#ef444420', color: '#ef4444' },
-  };
-  const c = colors[type] || colors.info;
-  s.style.background = c.bg;
-  s.style.color      = c.color;
-}
-
-function stopEnrollStream() {
-  if (_enrollStream) {
-    _enrollStream.getTracks().forEach(t => t.stop());
-    _enrollStream = null;
-  }
-}
-
-async function openEnrollModal(username) {
-  _enrollUsername = username;
-  const modal = document.getElementById('enroll-modal');
-  modal.style.display = 'flex';
-
-  // Reset state
-  document.getElementById('enroll-status').style.display = 'none';
-  const captureBtn = document.getElementById('enroll-capture-btn');
-  captureBtn.disabled     = true;
-  captureBtn.textContent  = '📸 Capture & Enroll';
-
-  enrollSetStatus('Starting camera…', 'info');
-
-  try {
-    _enrollStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
-    });
-
-    const video = document.getElementById('enroll-video');
-    video.srcObject = _enrollStream;
-    await video.play();
-
-    // Wait for actual video frames (readyState 4 = HAVE_ENOUGH_DATA)
-    await new Promise((resolve, reject) => {
-      const check = () => {
-        if (video.readyState >= 3 && video.videoWidth > 0) {
-          resolve();
-        } else {
-          video.addEventListener('canplay', resolve, { once: true });
-        }
-      };
-      check();
-      setTimeout(reject, 10000); // 10s timeout
-    });
-
-    // Extra 1s so auto-exposure / brightness settles
-    await new Promise(r => setTimeout(r, 1000));
-
-    captureBtn.disabled = false;
-    enrollSetStatus('✅ Camera ready — look straight at the camera, then click Capture.', 'info');
-
-  } catch (err) {
-    enrollSetStatus('❌ Camera error: ' + err.message, 'error');
-  }
-}
-
-/* Capture button */
-document.getElementById('enroll-capture-btn').addEventListener('click', async function() {
-  const video  = document.getElementById('enroll-video');
-  const canvas = document.getElementById('enroll-canvas');
-
-  if (!video.srcObject || video.readyState < 2) {
-    enrollSetStatus('❌ Camera not ready. Please wait a moment.', 'error');
-    return;
-  }
-
-  canvas.width  = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-
-  const base64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
-
-  this.disabled    = true;
-  this.textContent = 'Enrolling…';
-  document.getElementById('enroll-skip-btn').disabled = true;
-  enrollSetStatus('📡 Sending face to server…', 'info');
-
-  try {
-    const res  = await fetch('http://localhost:8086/api/auth/face/enroll', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ username: _enrollUsername, imageBase64: base64 })
-    });
-    const data = await res.json().catch(() => ({}));
-
-    if (res.ok) {
-      enrollSetStatus('✅ Face enrolled successfully!', 'success');
-      stopEnrollStream();
-      setTimeout(() => {
-        document.getElementById('enroll-modal').style.display = 'none';
-        window.location.href = 'dashboard.html';
-      }, 1200);
-    } else {
-      // "No face detected" → let user retry
-      enrollSetStatus('❌ ' + (data.message || 'Enrollment failed. Try again.'), 'error');
-      this.disabled    = false;
-      this.textContent = '📸 Retry Capture';
-      document.getElementById('enroll-skip-btn').disabled = false;
-    }
-  } catch (err) {
-    enrollSetStatus('❌ Cannot connect to server. Is Spring Boot running?', 'error');
-    this.disabled    = false;
-    this.textContent = '📸 Retry Capture';
-    document.getElementById('enroll-skip-btn').disabled = false;
-  }
-});
-
-/* Skip button */
-document.getElementById('enroll-skip-btn').addEventListener('click', function() {
-  stopEnrollStream();
-  document.getElementById('enroll-modal').style.display = 'none';
-  showToast('Face enroll skipped. You can set it up from the dashboard.', 'warning');
-  setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
-});
-
-/* ════════════════════════════════════════════
    REGISTER FORM SUBMIT
+   Face enrollment has been removed from this flow.
+   After a successful registration, the user is
+   simply sent to log in (or straight to the
+   dashboard if a token was returned). Face
+   enrollment can be done later, e.g. from the
+   dashboard.
 ════════════════════════════════════════════ */
 form.addEventListener('submit', async function(e) {
   e.preventDefault();
@@ -494,11 +318,12 @@ form.addEventListener('submit', async function(e) {
 
   if (result.ok) {
     if (result.data.token) {
+      // Account created and logged in directly — go straight to the dashboard.
       saveSession(result.data.token, result.data.user);
-      showToast('Account created! Now enroll your face 📷', 'success');
-      // Open the modal — camera starts inside, frames are visible before capture
-      openEnrollModal(username);
+      showToast('Account created! Redirecting to your dashboard…', 'success');
+      setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
     } else {
+      // Account created but no token issued — send to login.
       showToast('Account created! Please log in.', 'success');
       setTimeout(() => { window.location.href = 'index.html'; }, 1200);
     }
