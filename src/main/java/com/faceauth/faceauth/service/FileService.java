@@ -4,6 +4,7 @@ import com.faceauth.faceauth.entity.FileEntity;
 import com.faceauth.faceauth.repository.FileRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,11 @@ public class FileService {
     public List<FileEntity> getFilesByUserId(Long userId) {
 
         return fileRepository.findByUserId(userId);
+    }
+
+    public Optional<FileEntity> getByStoredFileName(String storedFileName) {
+
+        return fileRepository.findByStoredFileName(storedFileName);
     }
 
     public void deleteFile(Long id) {
