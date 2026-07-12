@@ -65,12 +65,10 @@ public class AuthController {
         }
         String token = "token-" + user.getId() + "-" + System.currentTimeMillis();
 
-        // ── Send login notification email (does not block login if it fails) ──
-        try {
-            emailService.sendLoginAlert(user.getEmail(), user.getName());
-        } catch (Exception e) {
-            System.out.println("[AuthController] Failed to send login email: " + e.getMessage());
-        }
+        // Login notification email is @Async now — this call returns immediately
+        // and the email is sent on a background thread, so a slow/unreachable
+        // SMTP server can no longer block or delay the login response.
+        emailService.sendLoginAlert(user.getEmail(), user.getName());
 
         return ResponseEntity.ok(Map.of(
             "token", token,
