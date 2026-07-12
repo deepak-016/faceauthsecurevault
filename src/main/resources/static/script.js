@@ -111,23 +111,49 @@ function passwordStrength(pwd) {
   return score;
 }
 
+/* ─── Password show/hide toggle ───
+   Wires up every <button class="input-toggle"> next to a password
+   field on every page (login, register, dashboard, etc.) */
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.input-toggle');
+  if (!btn) return;
+  const input = btn.previousElementSibling;
+  if (!input || (input.type !== 'password' && input.type !== 'text')) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁️';
+  }
+});
+
 /* ─── Core API fetch ─── */
-async function apiCall(endpoint, method = 'GET', body = null) {
+async function apiCall(endpoint, method = 'GET', body = null, timeoutMs = 15000) {
   const token = getToken();
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
     const res = await fetch(API + endpoint, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : null
+      body: body ? JSON.stringify(body) : null,
+      signal: controller.signal
     });
     let data = {};
     try { data = await res.json(); } catch(e) {}
     return { ok: res.ok, status: res.status, data };
   } catch (err) {
-    return { ok: false, status: 0,
-      data: { message: 'Cannot connect to server. Is Spring Boot running?' }};
+    const message = err.name === 'AbortError'
+      ? 'Server took too long to respond. Please try again.'
+      : 'Cannot connect to server. Is Spring Boot running?';
+    return { ok: false, status: 0, data: { message } };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
