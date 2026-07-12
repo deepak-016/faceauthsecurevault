@@ -9,8 +9,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -30,6 +32,12 @@ public class FileController {
     @Autowired
     private EmailService emailService;
 
+    // Configurable so it works on Windows (local dev) and Linux (Railway/Docker)
+    // alike. On Railway, mount a persistent Volume at this path so uploads
+    // survive redeploys — the container's own filesystem is wiped every deploy.
+    @Value("${app.upload.dir:uploads}")
+    private String uploadBaseDir;
+
     @PostMapping("/save")
     public ResponseEntity<FileEntity> saveFile(@RequestBody FileEntity fileEntity) {
         FileEntity savedFile = fileService.saveFile(fileEntity);
@@ -42,8 +50,7 @@ public class FileController {
         try {
             String originalName = file.getOriginalFilename();
             String storedName = UUID.randomUUID().toString() + "_" + originalName;
-            String uploadDir = "C:/FaceAuthWebApp/uploads/user_" + userId;
-            Path uploadPath = Paths.get(uploadDir);
+            Path uploadPath = Paths.get(uploadBaseDir, "user_" + userId);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
@@ -61,7 +68,7 @@ public class FileController {
             entity.setUploadTime(java.time.LocalDateTime.now());
             fileService.saveFile(entity);
 
-            // ── Send upload notification email (does not block upload if it fails) ──
+            // ── Send upload notification email (async — never blocks the upload) ──
             try {
                 User user = userRepo.findById(userId).orElse(null);
                 if (user != null) {
@@ -71,7 +78,7 @@ public class FileController {
                 System.out.println("[FileController] Failed to send upload email: " + mailEx.getMessage());
             }
 
-            return ResponseEntity.ok("File uploaded successfully");
+            return ResponseEntity.ok(Map.of("message", "File uploaded successfully"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -88,11 +95,17 @@ public class FileController {
     }
     @GetMapping("/download/{filename}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String filename) throws Exception {
-        Path path = Paths.get("C:/FaceAuthWebApp/uploads/" + filename);
+        // Look up the real stored path from the DB instead of guessing it —
+        // the old code searched directly under uploads/ and never matched the
+        // uploads/user_{id}/ subfolder that uploads actually get saved into.
+        FileEntity entity = fileService.getByStoredFileName(filename)
+                .orElseThrow(() -> new java.nio.file.NoSuchFileException("File not found: " + filename));
+
+        Path path = Paths.get(entity.getFilePath());
         Resource resource = new UrlResource(path.toUri());
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + filename + "\"")
+                        "attachment; filename=\"" + entity.getFileName() + "\"")
                 .body(resource);
     }
 }
