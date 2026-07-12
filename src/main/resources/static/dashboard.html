@@ -963,7 +963,7 @@ fileUploadBtn.addEventListener('click', async () => {
     fileClearBtn.click();
     loadFiles();
   } else {
-    showToast(res.data?.message || 'Upload failed.', 'error');
+    showToast(res.data?.message || 'Upload failed.', 'error', 8000);
     fileUploadBtn.disabled = false;
   }
 });
