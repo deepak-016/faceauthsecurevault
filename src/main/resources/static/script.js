@@ -148,9 +148,10 @@ async function apiCall(endpoint, method = 'GET', body = null, timeoutMs = 15000)
     try { data = await res.json(); } catch(e) {}
     return { ok: res.ok, status: res.status, data };
   } catch (err) {
+    console.error('[apiCall] fetch threw:', endpoint, err);
     const message = err.name === 'AbortError'
       ? 'Server took too long to respond. Please try again.'
-      : 'Cannot connect to server. Is Spring Boot running?';
+      : `Cannot reach server: ${err.name}: ${err.message}`;
     return { ok: false, status: 0, data: { message } };
   } finally {
     clearTimeout(timer);
@@ -212,7 +213,8 @@ async function uploadFile(file, userId) {
     try { data = await res.json(); } catch(e) { data = { message: await res.text() }; }
     return { ok: res.ok, status: res.status, data };
   } catch (err) {
-    return { ok: false, status: 0, data: { message: 'Cannot connect to server.' } };
+    console.error('[uploadFile] fetch threw:', err);
+    return { ok: false, status: 0, data: { message: `Upload failed: ${err.name}: ${err.message}` } };
   }
 }
 
